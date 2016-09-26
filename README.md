@@ -1,5 +1,6 @@
 # light-beams-unmixing
 
-Estimation of the position of the beam of a heliostat in the presence of other beams
+Estimation of the position of the beam of a heliostat in the presence of other beams.
 
-https://tree.taiga.io/project/vicente-gonzalez-ruiz-light-beams-unmixing
+* [Slack channel](https://tec-multimedia-ual.slack.com/messages/light-beams-unmixing/)
+* [Taiga project](https://tree.taiga.io/project/vicente-gonzalez-ruiz-light-beams-unmixing).
