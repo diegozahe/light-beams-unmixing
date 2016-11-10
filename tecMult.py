@@ -11,11 +11,9 @@ import matplotlib.pyplot as plt
 class heliostato:
 	
 	#lo declaro arriba para poder usarlo abajo xD
-	#le paso como parametro la imagen grande, luego la imagen pequeña que tiene que buscar
-	#y por ultimo el array donde estan guardadas las proyecciones
-	def contener(array, mancha):
-		#HAY QUE CAMBIARLOOOOO!!!!*********************************************************************
-		#Esta es 
+	#le paso como parametro el array que contiene las proyecciones y por ultimo
+	#le paso la proyeccion que representa movimiento.
+	def comprobar(array, mancha):
 		mediaEntropia = []
 		d = Image.fromarray(mancha)
 		media = 0
@@ -41,7 +39,6 @@ class heliostato:
 		print("Se esta moviendo el heliostato", (pos+1))
 		time.sleep(10)
 		return pos
-		#HASTA AQUI LLEGA EL METODO *****************************************************************
 	
 	#no deberia tardar mucho en hacer la comprobacion ya que no son imagenes completas sino recortes que contienen la mancha
 	def comprobarMancha(array, mancha):
@@ -79,11 +76,12 @@ class heliostato:
 
 	#EMPEZAMOS EL PROGRAMA GORDO
 	# Cargamos el vídeo
-	camara = cv2.VideoCapture("heliostato(2).MOV")
-
+	#camara = cv2.VideoCapture("heliostato(2).MOV")
+	camara = cv2.VideoCapture("video-prueba.mp4")
 	#*****************
 	#INICIALIZAMOS!!!!
 	#*****************
+	
 	# Inicializamos el primer frame a vacío.
 	# Nos servirá para obtener el fondo
 	fondo = None
@@ -104,8 +102,7 @@ class heliostato:
 	hel = []
 
 
-
-
+	comenzarRegistroMovimiento = False
 	# Recorremos todos los frames
 	while True:
 		# Obtenemos el frame
@@ -143,18 +140,21 @@ class heliostato:
 		# Buscamos contorno en la imagen
 		im, contornos, hierarchy = cv2.findContours(contornosimg,cv2.RETR_TREE,cv2.CHAIN_APPROX_SIMPLE)
 
-	 	#ESTO ESTA PERFECTO ----------------------------------------------------------------------------------------------------------------
 	 	#comenzmos de nuevo a detectar el fondo cuando hay mas de 1 proyeccion
 		comenzarDeNuevo = True
 
-		comenzarRegistroMovimiento = False
 		# Recorremos todos los contornos encontrados
 		for c in contornos:
+			#**************
+			#INICIALIZAMOS!
+			#**************
+
 			# Eliminamos los contornos más pequeño
 			contorno = cv2.contourArea(c)
 			# Obtenemos el bounds del contorno, el rectángulo mayor que engloba al contorno7
 			#w es wigth y h es heigh
 			(x1, y1, w, h) = cv2.boundingRect(c)
+
 			#calculamos la distancia entre los puntos (x1,y1) al punto (x2,y2) 
 			#numero = (w - x)**2 + (h-y)**2
 			numero = w**2 + h**2
@@ -168,11 +168,11 @@ class heliostato:
 			if contorno < 3000:
 				continue
 			#Si cumple los requisitos suponemos que es movimiento. Habria que poner una condicion de si se detecta el movimiento fuera de un cuadrado...
-			elif contorno > 3000 and contorno<60000 and comenzarRegistroMovimiento:
+			elif contorno > 3000 and contorno<50000 and comenzarRegistroMovimiento==True:
 				print("AHORA LO CAPTURAMOS")
 				#suponemos es movimiento y lo comparamos con el resto de manchas
 				pos = comprobar(hel, manchaNueva)
-				print("Hay movimiento, creemos que es el heliostado ",(pos+1)) 
+				print("Hay movimiento, creemos que es el heliostato ",(pos+1)) 
 				time.sleep(10)
 
 			else:
@@ -182,7 +182,9 @@ class heliostato:
 
 				if len(contornos)>1:
 					comenzarDeNuevo = True
-				if len(contornos)==1 and comenzarDeNuevo==True and distt[0]==distt[1] and distt[0]==distt[2] and arrayXYWH[0]==x1 and arrayXYWH[1]==y1 and arrayXYWH[2]==w and arrayXYWH[3]==h:
+				condicion1 = comenzarDeNuevo==True and distt[0]==distt[1] and distt[0]==distt[2]
+				condicion2 = arrayXYWH[0]==x1 and arrayXYWH[1]==y1 and arrayXYWH[2]==w and arrayXYWH[3]==h
+				if len(contornos)==1 and condicion1 and condicion2:
 					print("Se añadio un fondo!")
 					fondo = gris
 					comenzarDeNuevo = False
@@ -198,9 +200,7 @@ class heliostato:
 				#print(w, h)
 				verdadero = False
 				#comprobamos que la distancia sea la misma en varias ocasiones diferentes
-				#print("Numero fram = ", numFrame," Distt[k] =", distt[k],"dist = ", dist)
-				#print("Ha entrado en el contador")
-				#if distt[k]-dist <= 0 and distt[k]-dist >= -0.2:
+
 				if j == 0:
 					distt[0]=dist
 					j+=1
@@ -223,31 +223,15 @@ class heliostato:
 					if pri==seg and seg==ter and ter==pri:
 						#print("cumplio la condicion!!")
 						if comprobarMancha(hel, manchaNueva):
-							#NO HACEMOS NADA
-							#Si es True significa que si esta dentro del array y no queremso añadirlo de nuevo
+							#NO HACEMOS NADA! Si es True significa que si esta dentro de la lista y no queremos añadirlo de nuevo
 							continue
 						else:
-							#esto lo hacemos para evitar meter el contorno de la proyeccion conjunta por varios heliostatos
-							# que es nuestro "fondo" aun no establecido
-							#Introducimos un elemento mas que es "cualquier cosa" para poder insertar
-							#en la siguiente posicion la proxima vez.
-							#Le aplicamos dos capas a la piramide
+							#Si es false significa que NO esta en la lista y lo añadimos.
 							hel.append(manchaNueva) 
 							continue
 				else:
 					j+=1
-
-
-
-
-		#Hasta aqui funciona bien -------------------------------------------------------------------------------------------------------
-				#Ahora detectamos
-		#FALTA HACER EL CODIGO PARA CUANDO DETECTA MOVIMIENTO COMPARARLA CON TOOOOOODAS LAS MANCHAS****************************************
-		#ESCRIBIR CODIGO
-
-
-		#**********************************************************************************************************************************
-
+		
 		# Mostramos las imágenes de la cámara, el umbral y la resta
 		cv2.imshow("Camara", cv2.pyrDown(cv2.pyrDown(frame)))
 		cv2.imshow("Umbral", cv2.pyrDown(cv2.pyrDown(umbral)))
