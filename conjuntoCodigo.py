@@ -3,17 +3,26 @@ import cv2
 import time
 import math
 import metodos as met
+import argparse #necesario para introducir valores por parametro 
 
+#INSTRUCCIONES PARA MODIFICAR EL COMANDO QUE LANZA LA APLICACION
+#_____ prog -> para cambiar el nombre del comando que lanza este programa.
+#_____description -> info sobre lo que hace el programa
+# parser = argparse.ArgumentParser(prog="calibration",description="Process for identifying heliostats.")
 
+# parser.add_argument("numHeliostats",default="4",type=int,help="set the number of heliostats to calibrate at once")
+# parser.add_argument("--pyrLevels",default="0",type=int, #nargs="?",
+#                     help="set how many times the Pyramid method will be applied to source")
+# args = parser.parse_args()
 
-
-
-#*********************
-# DECLARAMOS VARIABLES
-#*********************
+# # Variables obtenidas por el usuario
+# cantHel = args.numHeliostats
+# cantPyrD = args.pyrLevels
+cantHel = 4
+cantPyrD = 0
 
 # Cargamos el vídeo
-camara = cv2.VideoCapture("varios_heliostatos.mp4")
+camara = cv2.VideoCapture("Videos/varios_heliostatos.mp4")
 fondo = None # Inicializamos el primer frame a vacío. Nos servirá para obtener el fondo
 
 # Listas
@@ -31,11 +40,6 @@ add1Mancha = False
 add2Mancha = False
 noEntrar1Mancha = False
 comprPAP = False
-
-
-#ToDo
-cantHel = 4
-cantPyrD = 0
 
 #**************************
 #** EMPEZAMOS EL PROGRAMA**
@@ -112,7 +116,8 @@ while True:
 		if contorno <= 500:
 			continue
 
-		# Si cumple los requisitos suponemos que es movimiento. Habria que poner una condicion de si se detecta el movimiento fuera de un cuadrado...
+		# Si cumple los requisitos suponemos que es movimiento. 
+		#Habria que poner una condicion de si se detecta el movimiento fuera de un cuadrado...
 		elif contorno > 500 and contorno<total and comenzarRegistroMovimiento == True:
 			# Hacemos una especie de contador para que solo lo haga 1 vez
 			if comprPAP == False:
@@ -127,19 +132,16 @@ while True:
 				print("Hay movimiento, creemos que es el heliostato ",(pos+1))
 				comprPAP = True
 
-		# Una vez hemos añadido las manchas establecemos el fondo
+		# Una vez hemos añadido las manchas establecemos el fondo. Damos 150 frame 
 		elif comenzarEstablecerFondo == True:
-			# TIENES QUE CAMBIAR A PARTIR DE AQUI!!***********************************************************************************************************
 			if cantHel == contHel:
 				if iteraciones==150:
-					fondo = gris # El nuevo fondo será
+					fondo = gris # El nuevo fondo sera gris
 					umbralFondo = met.umbralizar(gris)
 					comenzarRegistroMovimiento = True
 				while(iteraciones<150):
 					iteraciones+=1
 					(grabbed, frame) = camara.read()
-			# TIENES QUE CAMBIAR HASTA AQUI*******************************************************************************************************************
-
 		# Esta condicion se usa para ir añadiendo manchas.
 		elif comenzarRegistroMovimiento == False:
 			# La logica es la siguiente: en el momento en que haya un contorno y aparezca otro, añado el primer contorno a la lista.
