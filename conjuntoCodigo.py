@@ -5,6 +5,14 @@ import math
 import metodos as met
 import argparse #necesario para introducir valores por parametro 
 
+# INICIO LEYENDA
+# Las variables de control empezaran por VC_
+# Las variables que pueden ser modificadas por el usuario empezaran por VU_
+# Las variables que se usen como contadores empezaran por C_
+# Las variables que solo se modifican 1 vez durante todo el programa empezará por E_ (estatico)
+# FIN LEYENDA
+
+
 #INSTRUCCIONES PARA MODIFICAR EL COMANDO QUE LANZA LA APLICACION
 #_____ prog -> para cambiar el nombre del comando que lanza este programa.
 #_____description -> info sobre lo que hace el programa
@@ -15,11 +23,9 @@ parser.add_argument("--pyrLevels",default="0",type=int, #nargs="?",
                      help="set how many times the Pyramid method will be applied to source")
 args = parser.parse_args()
 
-# # Variables obtenidas por el usuario
+# Variables obtenidas por el usuario
 cantHel = args.numHeliostats
 cantPyrD = args.pyrLevels
-#cantHel = 4
-#cantPyrD = 0
 
 # Cargamos el vídeo
 camara = cv2.VideoCapture("Videos/varios_heliostatos.mp4")
@@ -28,10 +34,10 @@ fondo = None # Inicializamos el primer frame a vacío. Nos servirá para obtener
 # Listas
 listaHel = []
 listaTamañoHel = []
-listaHel1 = [[],[],[],[]]
 # Contadores
 contHel = 0
 iteraciones = 0
+contAñadir = 0
 
 # Variables de control
 comenzarRegistroMovimiento = False # Comenzamos de nuevo a detectar mas manchas cuando hay mas de 1 proyeccion
@@ -51,14 +57,13 @@ comprPAP = False
 while True:
 	hora1 = time.time()
 	# Obtenemos el frame
-	#print(type(weight))
 	(grabbed, frame) = camara.read()
  	
 	# Si hemos llegado al final del vídeo salimos
 	if not grabbed:
 		break
  	
- 	#bucle para reducir la imagen tantas veces como queramos
+ 	# Bucle para reducir la imagen tantas veces como queramos
 	for x in range(0,cantPyrD):
  		frame = cv2.pyrDown(frame)
 
@@ -113,21 +118,20 @@ while True:
 		cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
 		
 		# Si el contorno es tan pequeño suponemos es algo que no deberia estar...
-		if contorno <= 500:
+		if contorno <= 200:
 			continue
 
 		# Si cumple los requisitos suponemos que es movimiento. 
-		#Habria que poner una condicion de si se detecta el movimiento fuera de un cuadrado...
-		elif contorno > 500 and contorno<total and comenzarRegistroMovimiento == True:
+		# Habria que poner una condicion de si se detecta el movimiento fuera de un cuadrado...
+		elif contorno > 200 and contorno<total and comenzarRegistroMovimiento == True:
 			# Hacemos una especie de contador para que solo lo haga 1 vez
 			if comprPAP == False:
 				# Calculamos el punto (x2,y2):
 				y2 = y1 + h
 				x2 = x1 + w
-				manchaNueva = gris[y1:y2, x1:x2]
+				manchaNueva = im[y1:y2, x1:x2]
 				#met.visualizarLista(listaHel, manchaNueva)
 				pos = 0
-				#pos = met.comprobarPAP2(listaHel, manchaNueva)
 				pos = met.lorenzo(listaHel, manchaNueva)
 				print("Hay movimiento, creemos que es el heliostato ",(pos+1))
 				comprPAP = True
@@ -135,6 +139,7 @@ while True:
 		# Una vez hemos añadido las manchas establecemos el fondo. Damos 150 frame 
 		elif comenzarEstablecerFondo == True:
 			if cantHel == contHel:
+				met.visualizarLista(listaHel)
 				if iteraciones==150:
 					fondo = gris # El nuevo fondo sera gris
 					umbralFondo = met.umbralizar(gris)
@@ -149,25 +154,30 @@ while True:
 				print("Comenzamos a comparar")
 				comenzarEstablecerFondo = True
 			elif len(contornos)>1:
-				helCompr = []
-				for t in contornos:
-					(x1, y1, w, h) = cv2.boundingRect(t)
-					#calculamos el punto (x2,y2):
-					y2 = y1 + h
-					x2 = x1 + w
-					manchaNu = gris[y1:y2, x1:x2]
-					helCompr.append(manchaNu)
+				if contAñadir == 10:
+					helCompr = []
+					for t in contornos:
+						(x1, y1, w, h) = cv2.boundingRect(t)
+						#calculamos el punto (x2,y2):
+						y2 = y1 + h
+						x2 = x1 + w
+						manchaNu = im[y1:y2, x1:x2]
+						helCompr.append(manchaNu)
+				else:
+					contAñadir+=1
 				# Condicion para que no entre mas en la condicion de abajo, sino en la siguiente
 				if noEntrar1Mancha == True:
 					add1Mancha = True
 				else:
 					add2Mancha = True
+			# Una vez que ya se han juntado las 2 primeras manchas en 1, las añadimos a listaHel
 			elif len(contornos)==1 and add2Mancha == True:
 				listaHel.append(helCompr[1]) # En la posicion 1 esta la mancha que ya estaba antes
 				listaHel.append(helCompr[0]) # En la posicion 0 esta la mancha nueva
 				add2Mancha = False
 				noEntrar1Mancha = True
 				contHel += 2
+			# Este condicional solo añade una mancha
 			elif len(contornos)==1 and add1Mancha == True:
 				listaHel.append(helCompr[0])
 				add1Mancha = False
@@ -190,7 +200,7 @@ while True:
 
 	hora2 = time.time()
 	hora3 = hora2-hora1
-	#print(1/hora3)
+
 # Liberamos la cámara y cerramos todas las ventanas
 camara.release()
 cv2.destroyAllWindows()

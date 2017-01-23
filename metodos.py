@@ -56,13 +56,13 @@ def aumentarLista(lista, cantidad):
 
 
 # metodo para pintar las manchas
-def visualizarLista(lista, mancha):
+def visualizarLista(lista):
 	lista1 = ["mancha1.jpg","mancha2.jpg","mancha3.jpg","mancha4.jpg"]
 	i=0
 	for x in lista:
 		cv2.imwrite(lista1[i], x)
 		i+=1
-	cv2.imwrite("berruga.jpg", mancha)
+	#cv2.imwrite("berruga.jpg", mancha)
 
 # Metodo que devuelve el umbral introduciendo una imagen
 def umbralizar(gris):
@@ -98,7 +98,8 @@ def erosionDilatacion(mancha, numPrograma,cantidad):
 
 def lorenzo(lista, mancha):
 	listaValores = []
-	#'cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR','cv2.TM_CCORR_NORMED'
+	listaValores2 =[]
+	a = 0
 	for x in lista:
 		img = x
 		cv2.imshow("Camara", img)
@@ -106,12 +107,39 @@ def lorenzo(lista, mancha):
 		template = mancha
 		w, h = template.shape[::-1]
 		# Apply template Matching
-		res = cv2.matchTemplate(img,template, cv2.TM_CCOEFF)
+		res = cv2.matchTemplate(img,template, cv2.TM_CCOEFF) #'cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR','cv2.TM_CCORR_NORMED'
 		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
-		# res1 = cv2.matchTemplate(img2,template, cv2.TM_CCORR)
-		# min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 		listaValores.append(max_val)
 	print(listaValores)
+	return listaValores.index(max(listaValores))
+
+
+def lorenzo2(lista, mancha):
+	listaValores = []
+	for x in lista:
+		img = x
+		cv2.imshow("Camara", img)
+		img2 = img.copy()
+		template = mancha
+		w, h = template.shape[::-1]
+		# Apply template Matching
+		res = cv2.matchTemplate(img,template, cv2.TM_CCOEFF) #'cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR','cv2.TM_CCORR_NORMED'
+		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+		res2 = res.copy().tolist()
+		mayor = res2.count(max(res2))
+		listaValores.append(mayor)
+		print(mayor, max_val)
+		print(listaValores)
+
+		top_left = max_loc
+		bottom_right = (top_left[0] + w, top_left[1] + h)
+		cv2.rectangle(img,top_left, bottom_right, 255, 2)
+		plt.subplot(121),plt.imshow(res,cmap = 'gray')
+		plt.title('Matching Result'), plt.xticks([]), plt.yticks([])
+		plt.subplot(122),plt.imshow(img,cmap = 'gray')
+		plt.title('Detected Point'), plt.xticks([]), plt.yticks([])
+		plt.show()	
+
 	return listaValores.index(max(listaValores))
 
 
