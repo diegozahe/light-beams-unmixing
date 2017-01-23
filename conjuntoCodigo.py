@@ -8,18 +8,18 @@ import argparse #necesario para introducir valores por parametro
 #INSTRUCCIONES PARA MODIFICAR EL COMANDO QUE LANZA LA APLICACION
 #_____ prog -> para cambiar el nombre del comando que lanza este programa.
 #_____description -> info sobre lo que hace el programa
-# parser = argparse.ArgumentParser(prog="calibration",description="Process for identifying heliostats.")
+parser = argparse.ArgumentParser(prog="calibration",description="Process for identifying heliostats.")
 
-# parser.add_argument("numHeliostats",default="4",type=int,help="set the number of heliostats to calibrate at once")
-# parser.add_argument("--pyrLevels",default="0",type=int, #nargs="?",
-#                     help="set how many times the Pyramid method will be applied to source")
-# args = parser.parse_args()
+parser.add_argument("--numHeliostats",default="4",type=int,help="set the number of heliostats to calibrate at once")
+parser.add_argument("--pyrLevels",default="0",type=int, #nargs="?",
+                     help="set how many times the Pyramid method will be applied to source")
+args = parser.parse_args()
 
 # # Variables obtenidas por el usuario
-# cantHel = args.numHeliostats
-# cantPyrD = args.pyrLevels
-cantHel = 4
-cantPyrD = 0
+cantHel = args.numHeliostats
+cantPyrD = args.pyrLevels
+#cantHel = 4
+#cantPyrD = 0
 
 # Cargamos el vídeo
 camara = cv2.VideoCapture("Videos/varios_heliostatos.mp4")
