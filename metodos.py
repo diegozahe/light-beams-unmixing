@@ -66,7 +66,7 @@ def visualizarLista(lista):
 
 # Metodo que devuelve el umbral introduciendo una imagen
 def umbralizar(gris):
-	return cv2.threshold(gris, 190, 255, cv2.THRESH_BINARY)[1]
+	return cv2.threshold(gris, 100, 255, cv2.THRESH_BINARY)[1]
 
 # Este metodo te devuelve el umbral apartir de un tono de gris.
 def umbralNum(gris, num):
@@ -81,37 +81,24 @@ def listaVacia(lista):
 	except:
 		return True
 
-# Metodo para acelerar hacer la erosion dilatacion o lo que sea
-def erosionDilatacion(mancha, numPrograma,cantidad):
-	if numPrograma == 0:# dilatamos
-		return cv2.dilate(mancha, None, iterations = 2)
-	elif numPrograma == 1:# Erosionamos
-		return cv2.erode(mancha,None,iterations = 2)
-	elif numPrograma == 2:# Dilatamos, luego erosionamos
-		imagen = cv2.dilate(mancha, None, iterations = 2)
-		return cv2.erode(imagen,None,iterations = 2)
-	elif numPrograma == 3:# Erosionamos, luego dilatamos
-		imagen = cv2.erode(mancha, None, iterations = cantidad)
-		return cv2.dilate(imagen,None,iterations = cantidad)
-	else:
-		return "Programa mal seleccionado"
-
 def lorenzo(lista, mancha):
 	listaValores = []
-	listaValores2 =[]
 	a = 0
+	funciona = True
 	for x in lista:
 		img = x
-		cv2.imshow("Camara", img)
 		img2 = img.copy()
 		template = mancha
 		w, h = template.shape[::-1]
 		# Apply template Matching
+		if x.shape[0]<mancha.shape[0] or x.shape[1]<mancha.shape[1]:
+			funciona = False
+			continue
 		res = cv2.matchTemplate(img,template, cv2.TM_CCOEFF) #'cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR','cv2.TM_CCORR_NORMED'
 		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 		listaValores.append(max_val)
 	print(listaValores)
-	return listaValores.index(max(listaValores))
+	return listaValores.index(max(listaValores)), funciona
 
 
 def lorenzo2(lista, mancha):
