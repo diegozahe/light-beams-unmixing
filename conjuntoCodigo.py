@@ -12,13 +12,12 @@ import argparse #necesario para introducir valores por parametro
 # Las variables que solo se modifican 1 vez durante todo el programa empezará por E_ (estatico)
 # FIN LEYENDA
 
-
 #INSTRUCCIONES PARA MODIFICAR EL COMANDO QUE LANZA LA APLICACION
 #_____ prog -> para cambiar el nombre del comando que lanza este programa.
 #_____description -> info sobre lo que hace el programa
 parser = argparse.ArgumentParser(prog="calibration",description="Process for identifying heliostats.")
 
-parser.add_argument("--numHeliostats",default="4",type=int,help="set the number of heliostats to calibrate at once")
+parser.add_argument("--numHeliostats",default="4d",type=int,help="set the number of heliostats to calibrate at once")
 parser.add_argument("--pyrLevels",default="0",type=int, #nargs="?",
                      help="set how many times the Pyramid method will be applied to source")
 args = parser.parse_args()
@@ -28,6 +27,7 @@ cantHel = args.numHeliostats
 cantPyrD = args.pyrLevels
 
 # Cargamos el vídeo
+#camara = cv2.VideoCapture("Videos/video_paint3.mp4")
 camara = cv2.VideoCapture("Videos/varios_heliostatos.mp4")
 fondo = None # Inicializamos el primer frame a vacío. Nos servirá para obtener el fondo
 
@@ -38,6 +38,7 @@ listaTamañoHel = []
 contHel = 0
 iteraciones = 0
 contAñadir = 0
+cont2 = 0
 
 # Variables de control
 comenzarRegistroMovimiento = False # Comenzamos de nuevo a detectar mas manchas cuando hay mas de 1 proyeccion
@@ -69,7 +70,7 @@ while True:
 
 	# Convertimos a escala de grises
 	gris = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
- 	
+
  	# Aplicamos suavizado para eliminar ruido
 	gris = cv2.GaussianBlur(gris, (21, 21), 0)
 
@@ -87,20 +88,19 @@ while True:
 	# Dilatamos el umbral para tapar agujeros
 	umbral = cv2.dilate(umbral, None, iterations = 2)
 
-	if comenzarRegistroMovimiento == True:
-		# Calculo de la diferencia entre el fondo y el frame actual
-		resta = cv2.absdiff(fondo, gris)
-		umbral = met.umbralizar(resta)
-	else:
-		# Calculo la diferencia entre el fondo y el frame actual BINARIZADO
-		resta = cv2.absdiff(umbralFondo, umbral)
 	
+	# Calculo de la diferencia entre el fondo y el frame actual
+	resta = cv2.absdiff(fondo, gris)
+	umbral = met.umbralizar(resta)
+		
 	# Copiamos el umbral para detectar los contornos
 	contornosimg = umbral.copy()
 
-	# Buscamos contorno en la imagen. La variable contornosimg cambia!
-	im, contornos, hierarchy = cv2.findContours(contornosimg,cv2.RETR_TREE,cv2.CHAIN_APPROX_NONE)
+	# Buscamos contorno en la imagen. La variable contornosimg cambia! im = contornosimg
+	im, contornos, hierarchy = cv2.findContours(contornosimg,cv2.RETR_LIST,cv2.CHAIN_APPROX_NONE)
 	
+	edges = cv2.Canny(umbral,255,255)
+
 	# Comprobamos que la lista este vacia. Si lo esta cambiamos la variable comproPAP a false para que cuando se vuelva a salir
 	# un trozo de mancha compruebe cual es y no tenga que hacer la comprobacion muchas veces
 	if met.listaVacia(contornos) == True and comprPAP == True:
@@ -120,7 +120,6 @@ while True:
 		# Si el contorno es tan pequeño suponemos es algo que no deberia estar...
 		if contorno <= 200:
 			continue
-
 		# Si cumple los requisitos suponemos que es movimiento. 
 		# Habria que poner una condicion de si se detecta el movimiento fuera de un cuadrado...
 		elif contorno > 200 and contorno<total and comenzarRegistroMovimiento == True:
@@ -129,17 +128,24 @@ while True:
 				# Calculamos el punto (x2,y2):
 				y2 = y1 + h
 				x2 = x1 + w
-				manchaNueva = im[y1:y2, x1:x2]
-				#met.visualizarLista(listaHel, manchaNueva)
+				manchaNueva = edges[y1:y2, x1:x2]
 				pos = 0
-				pos = met.lorenzo(listaHel, manchaNueva)
-				print("Hay movimiento, creemos que es el heliostato ",(pos+1))
-				comprPAP = True
+				pos, funciona = met.lorenzo(listaHel, manchaNueva)
+				if funciona!=False:
+					print("Hay movimiento, creemos que es el heliostato ",(pos+1))
+				#time.sleep(10)
+				if cont2==30 or funciona == False:
+					comprPAP = True
+					print("siguiente")
+					cont2=0
+					funciona = True
+				else:
+					cont2+=1
 
 		# Una vez hemos añadido las manchas establecemos el fondo. Damos 150 frame 
 		elif comenzarEstablecerFondo == True:
 			if cantHel == contHel:
-				met.visualizarLista(listaHel)
+				#met.visualizarLista(listaHel)
 				if iteraciones==150:
 					fondo = gris # El nuevo fondo sera gris
 					umbralFondo = met.umbralizar(gris)
@@ -161,7 +167,7 @@ while True:
 						#calculamos el punto (x2,y2):
 						y2 = y1 + h
 						x2 = x1 + w
-						manchaNu = im[y1:y2, x1:x2]
+						manchaNu = edges[y1:y2, x1:x2]
 						helCompr.append(manchaNu)
 				else:
 					contAñadir+=1
@@ -185,8 +191,10 @@ while True:
 		
 	# Mostramos las imágenes de la cámara, el umbral y la resta
 	cv2.imshow("Camara", frame)
-	# cv2.imshow("Umbral", umbral)
-	# cv2.imshow("Resta", resta)
+	cv2.imshow("Edges", edges)
+	#cv2.imshow("Umbral", umbral)
+	cv2.imshow("Resta", resta)
+	
 
 	# Capturamos una tecla para salir
 	key = cv2.waitKey(1) & 0xFF
@@ -197,9 +205,6 @@ while True:
 	# Si ha pulsado la letra s, salimos
 	if key == ord("s"):
 		break
-
-	hora2 = time.time()
-	hora3 = hora2-hora1
 
 # Liberamos la cámara y cerramos todas las ventanas
 camara.release()
