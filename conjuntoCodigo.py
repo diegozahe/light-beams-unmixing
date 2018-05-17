@@ -15,9 +15,10 @@ import argparse #necesario para introducir valores por parametro
 #INSTRUCCIONES PARA MODIFICAR EL COMANDO QUE LANZA LA APLICACION
 #_____ prog -> para cambiar el nombre del comando que lanza este programa.
 #_____description -> info sobre lo que hace el programa
+
 parser = argparse.ArgumentParser(prog="calibration",description="Process for identifying heliostats.")
 
-parser.add_argument("--numHeliostats",default="4d",type=int,help="set the number of heliostats to calibrate at once")
+parser.add_argument("--numHeliostats",default="4",type=int,help="set the number of heliostats to calibrate at once")
 parser.add_argument("--pyrLevels",default="0",type=int, #nargs="?",
                      help="set how many times the Pyramid method will be applied to source")
 args = parser.parse_args()
@@ -27,17 +28,18 @@ cantHel = args.numHeliostats
 cantPyrD = args.pyrLevels
 
 # Cargamos el vídeo
-#camara = cv2.VideoCapture("Videos/video_paint3.mp4")
+#camara = cv2.VideoCapture("Videos/video_paint3.mp4") (si usas este video cambia los parametros de numHeliostats a 3)
 camara = cv2.VideoCapture("Videos/varios_heliostatos.mp4")
 fondo = None # Inicializamos el primer frame a vacío. Nos servirá para obtener el fondo
 
 # Listas
 listaHel = []
 listaTamañoHel = []
+
 # Contadores
 contHel = 0
 iteraciones = 0
-contAñadir = 0
+contAnadir = 0
 cont2 = 0
 
 # Variables de control
@@ -56,7 +58,6 @@ comprPAP = False
 #3, 2, 4, 1
 
 while True:
-	hora1 = time.time()
 	# Obtenemos el frame
 	(grabbed, frame) = camara.read()
  	
@@ -78,19 +79,13 @@ while True:
 	if fondo is None:
 		fondo = gris
 		total = fondo.shape[0]*fondo.shape[1] #calculamos la altura y anchura
-		total = total/8
 		umbralFondo = met.umbralizar(gris)
 		continue 	
 
-	# Aplicamos un umbral
-	umbral = met.umbralizar(gris)
-
-	# Dilatamos el umbral para tapar agujeros
-	umbral = cv2.dilate(umbral, None, iterations = 2)
-
-	
 	# Calculo de la diferencia entre el fondo y el frame actual
 	resta = cv2.absdiff(fondo, gris)
+
+	# Umbralizamos la imagen defencia
 	umbral = met.umbralizar(resta)
 		
 	# Copiamos el umbral para detectar los contornos
@@ -118,11 +113,11 @@ while True:
 		cv2.rectangle(frame, (x1, y1), (x1 + w, y1 + h), (0, 255, 0), 2)
 		
 		# Si el contorno es tan pequeño suponemos es algo que no deberia estar...
-		if contorno <= 200:
+		if contorno <= 300:
 			continue
 		# Si cumple los requisitos suponemos que es movimiento. 
 		# Habria que poner una condicion de si se detecta el movimiento fuera de un cuadrado...
-		elif contorno > 200 and contorno<total and comenzarRegistroMovimiento == True:
+		elif contorno > 300 and comenzarRegistroMovimiento == True:
 			# Hacemos una especie de contador para que solo lo haga 1 vez
 			if comprPAP == False:
 				# Calculamos el punto (x2,y2):
@@ -136,7 +131,6 @@ while True:
 				#time.sleep(10)
 				if cont2==30 or funciona == False:
 					comprPAP = True
-					print("siguiente")
 					cont2=0
 					funciona = True
 				else:
@@ -145,7 +139,6 @@ while True:
 		# Una vez hemos añadido las manchas establecemos el fondo. Damos 150 frame 
 		elif comenzarEstablecerFondo == True:
 			if cantHel == contHel:
-				#met.visualizarLista(listaHel)
 				if iteraciones==150:
 					fondo = gris # El nuevo fondo sera gris
 					umbralFondo = met.umbralizar(gris)
@@ -153,14 +146,18 @@ while True:
 				while(iteraciones<150):
 					iteraciones+=1
 					(grabbed, frame) = camara.read()
+
 		# Esta condicion se usa para ir añadiendo manchas.
 		elif comenzarRegistroMovimiento == False:
-			# La logica es la siguiente: en el momento en que haya un contorno y aparezca otro, añado el primer contorno a la lista.
+			# La logica es la siguiente: en el momento en que haya un contorno y aparezca otro, 
+			# añado el primer contorno a la lista.
 			if cantHel == contHel:
-				print("Comenzamos a comparar")
+				print("Comenzamos a comparar") # Mensaje para controlar por que parte del programa va.
 				comenzarEstablecerFondo = True
+				met.visualizarLista(listaHel)
+
 			elif len(contornos)>1:
-				if contAñadir == 10:
+				if contAnadir == 20:
 					helCompr = []
 					for t in contornos:
 						(x1, y1, w, h) = cv2.boundingRect(t)
@@ -169,13 +166,17 @@ while True:
 						x2 = x1 + w
 						manchaNu = edges[y1:y2, x1:x2]
 						helCompr.append(manchaNu)
+						print(contAnadir)
+						contAnadir = 0
+
 				else:
-					contAñadir+=1
+					contAnadir+=1
 				# Condicion para que no entre mas en la condicion de abajo, sino en la siguiente
 				if noEntrar1Mancha == True:
 					add1Mancha = True
 				else:
 					add2Mancha = True
+
 			# Una vez que ya se han juntado las 2 primeras manchas en 1, las añadimos a listaHel
 			elif len(contornos)==1 and add2Mancha == True:
 				listaHel.append(helCompr[1]) # En la posicion 1 esta la mancha que ya estaba antes
@@ -183,19 +184,22 @@ while True:
 				add2Mancha = False
 				noEntrar1Mancha = True
 				contHel += 2
+				#print("añadimos!!!")
+
 			# Este condicional solo añade una mancha
 			elif len(contornos)==1 and add1Mancha == True:
 				listaHel.append(helCompr[0])
 				add1Mancha = False
 				contHel += 1
+				#print("añadimos!!!")
 		
 	# Mostramos las imágenes de la cámara, el umbral y la resta
 	cv2.imshow("Camara", frame)
 	cv2.imshow("Edges", edges)
-	#cv2.imshow("Umbral", umbral)
+	cv2.imshow("Umbral", umbral)
 	cv2.imshow("Resta", resta)
+	cv2.imshow("Fondo", fondo)
 	
-
 	# Capturamos una tecla para salir
 	key = cv2.waitKey(1) & 0xFF
 	
