@@ -166,7 +166,7 @@ while True:
 						x2 = x1 + w
 						manchaNu = edges[y1:y2, x1:x2]
 						helCompr.append(manchaNu)
-						print(contAnadir)
+						#print(contAnadir)
 						contAnadir = 0
 
 				else:
