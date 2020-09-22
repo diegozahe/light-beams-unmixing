@@ -4,10 +4,11 @@ import time
 import math
 from matplotlib import pyplot as plt
 
+
 # Lo declaro arriba para poder usarlo abajo xD
 # Es como el anterior comprobarPAP pero reduzco la busqueda al borde izquierdo
 def comprobarPAP2(array, mancha):
-	array2 = aumentarLista(array,None)
+	array2 = aumentarLista(array,None) 
 	listaMancha = []
 	hora1 = time.time()
 	for k in array2:
@@ -66,8 +67,12 @@ def visualizarLista(lista):
 
 # Metodo que devuelve el umbral introduciendo una imagen
 def umbralizar(gris):
-	return cv2.threshold(gris, 100, 255, cv2.THRESH_BINARY)[1]
+	return cv2.threshold(gris, 100, 255, cv2.THRESH_BINARY)[1] 
 
+# 120 para varios_heliostatos
+# 150 para 
+# 120 para hacesLuzLinterna3
+	
 # Este metodo te devuelve el umbral apartir de un tono de gris.
 def umbralNum(gris, num):
 	return cv2.threshold(gris, num, 255, cv2.THRESH_BINARY)[1]
@@ -81,25 +86,78 @@ def listaVacia(lista):
 	except:
 		return True
 
-def lorenzo(lista, mancha):
+def detMaxCoinc(lista, manchaNueva):
 	listaValores = []
-	a = 0
 	funciona = True
 	for x in lista:
 		img = x
-		img2 = img.copy()
-		template = mancha
-		w, h = template.shape[::-1]
+		w, h = manchaNueva.shape[::-1]
 		# Apply template Matching
-		if x.shape[0]<mancha.shape[0] or x.shape[1]<mancha.shape[1]:
+		if x.shape[0]<manchaNueva.shape[0] or x.shape[1]<manchaNueva.shape[1]:
 			funciona = False
+			listaValores.append(0)
 			continue
-		res = cv2.matchTemplate(img,template, cv2.TM_CCOEFF) #'cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR','cv2.TM_CCORR_NORMED'
+		res = cv2.matchTemplate(img, manchaNueva, cv2.TM_CCOEFF) #'cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR','cv2.TM_CCORR_NORMED'
 		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
 		listaValores.append(max_val)
-	print(listaValores)
-	return listaValores.index(max(listaValores)), funciona
+	
+	if not listaValores:
+		return listaValores, -1, False
+	# Comprobamos que haya diferencia entre los valores del array	
+	#elif max(listaValores) <= (min(listaValores)+100):
+		#return listaValores, -1, False
+	else:
+		return listaValores, listaValores.index(max(listaValores)), funciona
 
+def detMaxCoincMedium(lista, manchaNueva, entPro):
+	manchaNueva = getMedium(manchaNueva, entPro)
+
+	listaValores = []
+	listaValoresRes = []
+	diccionario = {}
+	funciona = True
+	i = 0
+	for x in lista:
+		x = getMedium(x, entPro)
+		img = x
+		w, h = manchaNueva.shape[::-1]
+		# Apply template Matching
+		if x.shape[0]<manchaNueva.shape[0] or x.shape[1]<manchaNueva.shape[1]:
+			funciona = False
+			listaValores.append(0)
+			i+=1
+			continue
+		res = cv2.matchTemplate(img, manchaNueva, cv2.TM_CCOEFF) #'cv2.TM_CCOEFF', 'cv2.TM_CCOEFF_NORMED', 'cv2.TM_CCORR','cv2.TM_CCORR_NORMED', TM_SQDIFF
+
+		listaValoresRes.append(res)
+		#diccionario[i] = res
+		i+=1
+
+		min_val, max_val, min_loc, max_loc = cv2.minMaxLoc(res)
+		listaValores.append(max_val)
+
+	if not listaValores:
+		return listaValores, -1, False
+	# Comprobamos que haya diferencia entre los valores del array	
+	elif max(listaValores) <= (min(listaValores)+100):
+		return listaValores, -1, False
+	else:
+		return listaValores, listaValores.index(max(listaValores)), funciona
+
+def getMedium(img, entPro):
+	# Calculamos las coordenadas para partir la imagen a la mitad
+	(x1, y1, w, h) = cv2.boundingRect(img)
+	#calculamos el punto (x2,y2):
+	y2 = y1 + h
+	x2 = x1 + w
+	# punto medio
+	x3 = (x1+x2)/2
+
+	if entPro == 0:
+		manchaNueva = img[y1:y2, x1:int(x3)]
+	else:
+		manchaNueva = img[y1:y2, int(x3):x2]
+	return manchaNueva
 
 def lorenzo2(lista, mancha):
 	listaValores = []
@@ -129,5 +187,17 @@ def lorenzo2(lista, mancha):
 
 	return listaValores.index(max(listaValores))
 
+def sortContours(cnts):
+	diccionario = {}
+	result = []
+	for c in cnts:
+		# Obtenemos el bounds del contorno, el rectángulo mayor que engloba al contorno
+		(x1, y1, w, h) = cv2.boundingRect(c)
+		diccionario[x1] = c
 
+	dictionary_items = diccionario.items() 
+	sorted_items = sorted(dictionary_items)
+	for x, c in sorted_items:
+		result.append(c)
 
+	return result
